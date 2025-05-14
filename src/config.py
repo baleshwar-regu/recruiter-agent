@@ -1,0 +1,4 @@
+import os
+
+SUPABASE_API_URL = os.getenv("SUPABASE_API_URL")
+SUPABASE_API_KEY = os.getenv("SUPABASE_API_KEY")
