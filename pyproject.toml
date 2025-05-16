@@ -1,0 +1,17 @@
+[project]
+name = "recruiter-agent"
+version = "0.1.0"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "--strict-markers"
+markers = [
+    "asyncio: mark test to be run with asyncio"
+]
