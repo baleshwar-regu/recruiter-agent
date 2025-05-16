@@ -1,83 +1,82 @@
 from supabase import Client
-from typing import Optional
+from datetime import datetime
 
-from models.candidate_profile import CandidateProfile
-from models.resume_summary import ResumeSummary
-from models.candidate_evaluation import Scorecard, CandidateEvaluation
+from models.candidate import Candidate, CandidateProfile, ResumeSummary, Scorecard, CandidateEvaluation
 
 
-def get_candidate_by_id(candidate_id: str, supabase_client: Client):
-    result = supabase_client.table("CandidateProfile")\
-        .select("*")\
-        .eq("candidate_id", candidate_id)\
-        .single()\
-        .execute()
-    
+def get_candidate_by_id(
+        candidate_id: str, 
+        supabase: Client) -> Candidate:
+    result = supabase.table("candidates").select("*").eq("candidate_id", candidate_id).single().execute()
     data = result.data
 
     if not data:
         raise ValueError(f"No candidate found with ID: {candidate_id}")
 
-    profile = CandidateProfile(**{
-        k: data[k] for k in CandidateProfile.model_fields.keys()
-    })
+    profile = CandidateProfile(**{k: data.get(k) for k in CandidateProfile.model_fields.keys()})
+
+    response = supabase.storage.from_("recruiter-agent-resumes").create_signed_url(
+        path=profile.resume_file_name,
+        expires_in=3600  # valid for 1 hour
+        )
+    profile.resume_url = response.get("signedUrl") 
 
     resume_summary = ResumeSummary(
-        experience_summary=data["experience_summary"],
-        core_technical_skills=data["core_technical_skills"],
-        specialized_technical_skills=data["specialized_technical_skills"],
-        current_project=data["current_project"],
-        other_notable_projects=data["other_notable_projects"],
-        education_certification=data["education_certification"],
-        potential_flags=data["potential_flags"],
+        experience_summary=data.get("experience_summary"),
+        core_technical_skills=data.get("core_technical_skills") or [],
+        specialized_technical_skills=data.get("specialized_technical_skills") or [],
+        current_project=data.get("current_project"),
+        other_notable_projects=data.get("other_notable_projects") or [],
+        education_certification=data.get("education_certification"),
+        potential_flags=data.get("potential_flags") or [],
         resume_notes=data.get("resume_notes")
-    )
+    ) if data.get("experience_summary") else None
 
-    scorecard_data = data.get("scorecard")
     evaluation = CandidateEvaluation(
-        scorecard=Scorecard(**scorecard_data),
-        summary=data.get("evaluation_summary", ""),
-        recommendation=data.get("recommendation", "Not Recommend")
+        scorecard=Scorecard(**data["scorecard"]),
+        summary=data.get("evaluation_summary"),
+        recommendation=data.get("recommendation")
+    ) if data.get("scorecard") else None
+
+    return Candidate(
+        profile=profile,
+        resume_summary=resume_summary,
+        evaluation=evaluation,
+        status=data.get("status")
     )
 
-    return profile, resume_summary, evaluation
-
+# update_candidate_by_id
 def update_candidate_by_id(
-    candidate_id: str,
-    supabase_client: Client,
-    profile: Optional[CandidateProfile] = None,
-    resume_summary: Optional[ResumeSummary] = None,
-    evaluation: Optional[CandidateEvaluation] = None,
-    status: Optional[str] = None
-):
-    update_fields = {}
+        candidate: Candidate, 
+        supabase: Client) -> str:
+    data = {}
 
-    # Flatten CandidateProfile
-    if profile:
-        update_fields.update({
-            k: getattr(profile, k)
-            for k in CandidateProfile.model_fields.keys()
-            if getattr(profile, k) is not None and k != "candidate_id"
-        })
+    # if candidate.profile:
+    #     data.update({
+    #         k: getattr(candidate.profile, k)
+    #         for k in CandidateProfile.model_fields.keys()
+    #         if k != "candidate_id" and getattr(candidate.profile, k) is not None
+    #     })
 
-    # Flatten ResumeSummary
-    if resume_summary:
-        update_fields.update(resume_summary.model_dump(exclude_none=True))
+    if candidate.resume_summary:
+        data.update(candidate.resume_summary.model_dump(exclude_none=True))
 
-    # Flatten Evaluation
-    if evaluation:
-        update_fields["scorecard"] = evaluation.scorecard.model_dump()
-        update_fields["evaluation_summary"] = evaluation.summary
-        update_fields["recommendation"] = evaluation.recommendation
+    if candidate.evaluation:
+        data["scorecard"] = candidate.evaluation.scorecard.model_dump()
+        data["evaluation_summary"] = candidate.evaluation.summary
+        data["recommendation"] = candidate.evaluation.recommendation
 
-    # Optional status override
-    if status:
-        update_fields["status"] = status
+    if candidate.status:
+        data["status"] = candidate.status
 
-    if not update_fields:
-        raise ValueError("No fields provided to update.")
+    data["updated_at"] = datetime.utcnow().isoformat()
 
-    result = supabase_client.table("CandidateProfile")\
-        .update(update_fields)\
-        .eq("candidate_id", candidate_id)\
+    if not data:
+        raise ValueError("No fields to update.")
+
+    response = supabase.table("candidates")\
+        .update(data)\
+        .eq("candidate_id", candidate.profile.candidate_id)\
         .execute()
+
+    return response

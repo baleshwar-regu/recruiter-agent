@@ -1,17 +1,21 @@
 
 from dataclasses import dataclass
 from supabase import Client as SupabaseClient
+from models.candidate import Candidate
 
 @dataclass
 class AgentDependencies:
     supabase: SupabaseClient  # Used for DB interaction
+    candidate: Candidate
 
 RESUME_AGENT_PROMPT = """
 
 You are an AI Resume Analyzer tasked with extracting a structured summary from a candidate's resume.
 
-You have access to the full resume text. Your goal is to populate each field of the `ResumeSummary` object below, based only on the 
-information available in the resume. Be concise, factual, and avoid assumptions.
+You have access to the full resume text. Your goal is to -
+   1. Populate each field of the `ResumeSummary` object below, based only on the information available in the resume. Be concise, factual, 
+   and avoid assumptions.
+   2. Update the resume summary in the database once resume summary is generated. 
 
 Extract the following fields one by one:
 
@@ -54,9 +58,8 @@ Extract the following fields one by one:
 
 Only use information you can find in the resume. If something is missing, leave the field blank or omit it from the final object.
 
-Output your result in this format:
+Output your result in this JSON format:
 
-```json
 {
   "experience_summary": "...",
   "core_technical_skills": [...],
@@ -67,7 +70,6 @@ Output your result in this format:
   "potential_flags": ["..."],
   "resume_notes": "..."
 }
-
 
 """
 

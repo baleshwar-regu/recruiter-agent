@@ -1,7 +1,11 @@
 import os
 import logfire
 from pydantic_ai import Agent, RunContext
-from agent_config import RESUME_AGENT_PROMPT, AgentDependencies
+from agents.agent_config import RESUME_AGENT_PROMPT, AgentDependencies
+
+from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
+from parsers.resume_parser import parse_resume_from_url
+from models.candidate import ResumeSummary
 
 # Configure logging
 logfire.configure(send_to_logfire='if-token-present')
@@ -20,8 +24,23 @@ resume_agent = Agent(
 
 @resume_agent.tool
 async def fetch_candidate_resume (
-    ctx: RunContext[AgentDependencies],
-    candidate_id: str
-) -> list[str]:
+    ctx: RunContext[AgentDependencies]
+) -> str:
     
-    return []
+    resume_url = ctx.deps.candidate.profile.resume_url
+    resume = parse_resume_from_url(resume_url)
+
+    return resume
+
+@resume_agent.tool
+async def update_resume_summary_in_db (
+    ctx: RunContext[AgentDependencies],
+    resume_summary: ResumeSummary
+) -> str:
+
+    candidate = ctx.deps.candidate
+    candidate.resume_summary = resume_summary
+
+    response = update_candidate_by_id(candidate, ctx.deps.supabase)
+
+    return response
