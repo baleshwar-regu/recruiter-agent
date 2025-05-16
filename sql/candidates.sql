@@ -1,0 +1,22 @@
+create table Candidates (
+  candidate_id text primary key,
+  name text,
+  email text,
+  phone text,
+  resume_file_name text,
+  resume_text text,
+  experience_summary text,
+  core_technical_skills jsonb,
+  specialized_technical_skills jsonb,
+  current_project text,
+  other_notable_projects jsonb,
+  education_certification text,
+  potential_flags jsonb,
+  resume_notes text,
+  scorecard jsonb,
+  evaluation_summary text,
+  recommendation text,
+  status text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
