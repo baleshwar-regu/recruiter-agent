@@ -54,7 +54,7 @@ async def main():
 
             Candidate: "{message}"
             """
-        
+
         response = await interview_agent.run(
             user_prompt=augmented_message, 
             deps=agent_deps,
@@ -62,7 +62,7 @@ async def main():
         
         message_history = response.all_messages()
         
-        print(f"Agent: {response.output}")
+        print(f"Interviewer: {response.output}")
 
         # Prompt next input
         message = input("You: ")

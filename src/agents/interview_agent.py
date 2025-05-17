@@ -19,10 +19,12 @@ interview_agent = Agent(
 )
 
 
-@interview_agent.tool
-async def get_candidate_details (
-    ctx: RunContext[AgentDependencies]
-) -> str:
+# @interview_agent.tool
+# async def end_interview (
+#     ctx: RunContext[AgentDependencies]
+# ) -> str:
     
-    candidate = ctx.deps.candidate
-    return candidate
+#     candidate_name = ctx.deps.candidate.profile.name
+#     #TODO call vapi to end call
+#     end_message = f"Let's end the call here. {candidate_name}, it was my pleasure speaking with you. I will pass on my feedback to HR for the next steps."
+#     return {"action": "end_interview", "message": end_message}
