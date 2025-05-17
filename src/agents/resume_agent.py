@@ -2,16 +2,18 @@ import os
 import logfire
 from pydantic_ai import Agent, RunContext
 from agents.agent_config import RESUME_AGENT_PROMPT, AgentDependencies
+from config import RESUME_LLM_MODEL, OPENAI_KEY
 
-from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
+from db.candidate_repository import update_candidate_by_id
 from parsers.resume_parser import parse_resume_from_url
 from models.candidate import ResumeSummary
 
 # Configure logging
 logfire.configure(send_to_logfire='if-token-present')
 
-model = os.getenv("RESUME_LLM_MODEL")
-openai_key = os.getenv("OPENAI_API_KEY")
+model = RESUME_LLM_MODEL
+openai_key = OPENAI_KEY
+
 resume_agent = Agent(
     model = model,
     system_prompt = RESUME_AGENT_PROMPT,
