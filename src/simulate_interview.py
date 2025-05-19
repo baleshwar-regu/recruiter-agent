@@ -7,6 +7,7 @@ from pydantic_ai.messages import ModelMessage
 from agents.agent_config import AgentDependencies
 from agents.resume_agent import resume_agent
 from agents.interview_agent import interview_agent
+from agents.evaluation_agent import evaluation_agent
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, INTERVIEW_LLM_MODEL, OPENAI_KEY
 from db.candidate_repository import get_candidate_by_id
@@ -76,7 +77,7 @@ async def simulate_interview(personality: str):
     def get_elapsed_minutes():
         nonlocal turn_counter       # ← tell Python to bind to the outer turn_counter
         turn_counter += 1
-        return turn_counter * 2
+        return turn_counter * 1
  
     # Interview loop
     while True:
@@ -104,9 +105,11 @@ async def simulate_interview(personality: str):
         interviewer = interviewer_response.output.strip()
         
         if interviewer.find("[END_OF_INTERVIEW_END_CALL]") > 0:
-            # await vapi.speak(closing_text, ctx.deps.call_id)
+            # await vapi.speak(interviewer.replace("[END_OF_INTERVIEW_END_CALL]", ""), ctx.deps.call_id)
             # end vapi call
             # await vapi.hangup_call(ctx.deps.call_id)
+            
+            transcript.append({"role": "interviewer", "content": interviewer})
             print(f"interviewer indicated end {interviewer}")
             break
 
@@ -138,11 +141,18 @@ async def simulate_interview(personality: str):
         f"[{t['role'].capitalize()}: {t['content']}" for t in transcript
     ])
 
-    print(full_transcript)
+    evaluation_response = await evaluation_agent.run(
+        user_prompt=full_transcript,
+        deps=agent_deps
+        )
+    
+    print(f"Evaluation results {evaluation_response.output}")
 
 if __name__ == "__main__":
-    asyncio.run(simulate_interview("not interested, harassing interviewer, foul language"))
+    asyncio.run(simulate_interview("chatty but vague and dodges technical questions"))
 
+#frequently asks follow up questions
+#not a strong developer
 #chatty but vague and dodges technical questions
 #to the point, clear headed, analytical, very strong technical command, hands-on
 #casual, inappropriate, figured speaking to AI, foul language

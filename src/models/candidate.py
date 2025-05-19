@@ -32,6 +32,7 @@ class Scorecard(BaseModel):
 
 class CandidateEvaluation(BaseModel):
     scorecard: Scorecard
+    interview_transcript: Optional[str] = None
     summary: Optional[str] = None
     recommendation: Optional[Literal["Recommend", "Not Recommend"]] = None
 
