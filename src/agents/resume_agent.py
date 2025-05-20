@@ -29,10 +29,12 @@ async def fetch_candidate_resume (
     ctx: RunContext[AgentDependencies]
 ) -> str:
     
-    resume_url = ctx.deps.candidate.profile.resume_url
-    resume = parse_resume_from_url(resume_url)
+    candidate = ctx.deps.candidate
+    resume_url = candidate.profile.resume_url
+    parsed_resume = parse_resume_from_url(resume_url)
+    candidate.parsed_resume = parsed_resume
 
-    return resume
+    return parsed_resume
 
 @resume_agent.tool
 async def update_resume_summary_in_db (
@@ -42,6 +44,7 @@ async def update_resume_summary_in_db (
 
     candidate = ctx.deps.candidate
     candidate.resume_summary = resume_summary
+    candidate.status = "RESUME_SUMMARY_GENERATED"
 
     response = update_candidate_by_id(candidate, ctx.deps.supabase)
 

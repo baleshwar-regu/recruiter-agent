@@ -1,5 +1,5 @@
 from supabase import Client
-from datetime import datetime
+from datetime import datetime, timezone
 
 from models.candidate import Candidate, CandidateProfile, ResumeSummary, Scorecard, CandidateEvaluation
 
@@ -51,12 +51,8 @@ def update_candidate_by_id(
         supabase: Client) -> str:
     data = {}
 
-    # if candidate.profile:
-    #     data.update({
-    #         k: getattr(candidate.profile, k)
-    #         for k in CandidateProfile.model_fields.keys()
-    #         if k != "candidate_id" and getattr(candidate.profile, k) is not None
-    #     })
+    if candidate.parsed_resume:
+        data["parsed_resume"] = candidate.parsed_resume
 
     if candidate.resume_summary:
         data.update(candidate.resume_summary.model_dump(exclude_none=True))
@@ -66,10 +62,13 @@ def update_candidate_by_id(
         data["evaluation_summary"] = candidate.evaluation.summary
         data["recommendation"] = candidate.evaluation.recommendation
 
+    if candidate.interview_transcript:
+        data["interview_transcript"] = candidate.interview_transcript
+
     if candidate.status:
         data["status"] = candidate.status
 
-    data["updated_at"] = datetime.utcnow().isoformat()
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     if not data:
         raise ValueError("No fields to update.")

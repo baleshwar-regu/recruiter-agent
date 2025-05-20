@@ -10,7 +10,6 @@ class CandidateProfile(BaseModel):
     client_name: Optional[str] = None
     resume_file_name: Optional[str] = None
     resume_url: Optional[str] = None
-    resume_text: Optional[str] = None
 
 class ResumeSummary(BaseModel):
     experience_summary: Optional[str] = None
@@ -32,12 +31,13 @@ class Scorecard(BaseModel):
 
 class CandidateEvaluation(BaseModel):
     scorecard: Scorecard
-    interview_transcript: Optional[str] = None
     summary: Optional[str] = None
     recommendation: Optional[Literal["Recommend", "Not Recommend"]] = None
 
 class Candidate(BaseModel):
     profile: CandidateProfile
+    parsed_resume: Optional[str] = None
     resume_summary: Optional[ResumeSummary] = None
+    interview_transcript: Optional[str] = None
     evaluation: Optional[CandidateEvaluation] = None
     status: Optional[str] = None
