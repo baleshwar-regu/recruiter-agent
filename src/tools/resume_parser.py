@@ -4,6 +4,10 @@ import logging
 from pdfminer.high_level import extract_text_to_fp
 from docx import Document
 from urllib.parse import urlparse
+import json
+from typing import Any
+from pydantic import ValidationError
+from models.candidate import ResumeSummary
 
 # Suppress noisy PDF parser logs
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
@@ -32,3 +36,21 @@ def parse_resume_from_url(resume_url: str) -> str:
 
     else:
         raise ValueError(f"Unsupported resume format: {file_ext}")
+
+def parse_resume_summary(json_str: str) -> ResumeSummary:
+    """
+    Given a JSON string from the LLM matching the ResumeSummary schema,
+    parse it into a ResumeSummary instance (or raise on validation error).
+    """
+    try:
+        payload: Any = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON returned by LLM: {e}")
+
+    try:
+        summary = ResumeSummary(**payload)
+    except ValidationError as ve:
+        # You can log ve.errors() or ve.json() for debugging
+        raise ValueError(f"ResumeSummary validation error: {ve}")
+
+    return summary

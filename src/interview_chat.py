@@ -4,20 +4,20 @@ from config import SUPABASE_URL, SUPABASE_KEY
 from agents.agent_config import AgentDependencies
 from agents.resume_agent import resume_agent
 from agents.interview_agent import interview_agent
-from db.candidate_repository import get_candidate_by_id
-from models.candidate import Candidate
+from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
+from models.candidate import Candidate, ResumeSummary
 from typing import List
 from pydantic_ai.messages import ModelMessage
 import time
+from tools.resume_parser import parse_resume_summary 
 
 
 async def main():
 
     supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    candidate = get_candidate_by_id(candidate_id="1", supabase=supabase_client)
+    candidate = get_candidate_by_id(candidate_id="1")
 
     agent_deps = AgentDependencies(
-        supabase=supabase_client,
         candidate=candidate
     )
 
@@ -26,9 +26,13 @@ async def main():
         message, 
         deps=agent_deps)
 
-    print(f"Resume summary: {response.output}")
+    resume_summary = parse_resume_summary(response.output)
+    print(f"Resume summary: {resume_summary}")
 
-    candidate = get_candidate_by_id(candidate_id="1", supabase=supabase_client)
+    candidate.resume_summary = resume_summary
+    candidate.status = "RESUME_SUMMARY_GENERATED"
+
+    response = update_candidate_by_id(candidate=candidate)
 
     start_time = time.time()
 

@@ -11,6 +11,7 @@ from agents.evaluation_agent import evaluation_agent
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, INTERVIEW_LLM_MODEL, OPENAI_KEY
 from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
+from tools.resume_parser import parse_resume_summary
 
 # Simulated candidate agent prompt template
 CANDIDATE_PROMPT_TEMPLATE = """
@@ -45,18 +46,25 @@ async def simulate_interview(personality: str, skill: str):
 
     model = INTERVIEW_LLM_MODEL
     openai_key = OPENAI_KEY
-    supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    candidate = get_candidate_by_id(candidate_id="1", supabase=supabase_client)
+
+    candidate = get_candidate_by_id(candidate_id="1")
 
     agent_deps = AgentDependencies(
-        supabase=supabase_client, 
         candidate=candidate)
     
     resume_agent_message = "analyze the resume for the candidate"
-    await resume_agent.run(
-        resume_agent_message, 
-        deps=agent_deps
-    )
+    resume_agent_response = await resume_agent.run(
+                                resume_agent_message, 
+                                deps=agent_deps
+                            )
+
+    resume_summary = parse_resume_summary(resume_agent_response.output)
+    print(f"Resume summary: {resume_summary}")
+
+    candidate.resume_summary = resume_summary
+    candidate.status = "RESUME_SUMMARY_GENERATED"
+
+    update_candidate_by_id(candidate=candidate)
 
     interviewer_message_history: List[ModelMessage] = []
     candidate_message_history: List[ModelMessage] = []
@@ -146,9 +154,7 @@ async def simulate_interview(personality: str, skill: str):
     candidate.interview_transcript = full_transcript
     candidate.status = "INTERVIEW_COMPLETE"
 
-    update_candidate_by_id(
-        candidate=candidate, 
-        supabase=supabase_client)
+    update_candidate_by_id(candidate=candidate)
 
     evaluation_response = await evaluation_agent.run(
         user_prompt=full_transcript,
@@ -160,7 +166,7 @@ async def simulate_interview(personality: str, skill: str):
 if __name__ == "__main__":
     asyncio.run(simulate_interview(
         personality="high in confidence, strong communication",
-        skill="very week in .net/c#, weak in concepts and system design, vague technical understanding in architecture"
+        skill="expert in .net/c#/sql, strong in concepts and system design"
         ))
 
 # not a strong developer, provides short, weak and wrong answers, very low on confidence

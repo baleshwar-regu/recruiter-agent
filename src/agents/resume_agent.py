@@ -5,7 +5,7 @@ from agents.agent_config import RESUME_AGENT_PROMPT, AgentDependencies
 from config import RESUME_LLM_MODEL, OPENAI_KEY
 
 from db.candidate_repository import update_candidate_by_id
-from parsers.resume_parser import parse_resume_from_url
+from tools.resume_parser import parse_resume_from_url
 from models.candidate import ResumeSummary
 
 # Configure logging
@@ -35,17 +35,3 @@ async def fetch_candidate_resume (
     candidate.parsed_resume = parsed_resume
 
     return parsed_resume
-
-@resume_agent.tool
-async def update_resume_summary_in_db (
-    ctx: RunContext[AgentDependencies],
-    resume_summary: ResumeSummary
-) -> str:
-
-    candidate = ctx.deps.candidate
-    candidate.resume_summary = resume_summary
-    candidate.status = "RESUME_SUMMARY_GENERATED"
-
-    response = update_candidate_by_id(candidate=candidate)
-
-    return response
