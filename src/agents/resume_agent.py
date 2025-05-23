@@ -46,6 +46,6 @@ async def update_resume_summary_in_db (
     candidate.resume_summary = resume_summary
     candidate.status = "RESUME_SUMMARY_GENERATED"
 
-    response = update_candidate_by_id(candidate, ctx.deps.supabase)
+    response = update_candidate_by_id(candidate=candidate)
 
     return response

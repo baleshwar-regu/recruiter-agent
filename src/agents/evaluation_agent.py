@@ -27,6 +27,6 @@ async def update_candidate_evaluation_in_db (
     candidate.evaluation = candidate_evaluation
     candidate.status = "EVALUATION_GENERATED"
 
-    response = update_candidate_by_id(candidate, ctx.deps.supabase)
+    response = update_candidate_by_id(candidate=candidate)
 
     return response

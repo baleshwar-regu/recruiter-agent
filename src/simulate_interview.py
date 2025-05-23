@@ -55,7 +55,8 @@ async def simulate_interview(personality: str, skill: str):
     resume_agent_message = "analyze the resume for the candidate"
     await resume_agent.run(
         resume_agent_message, 
-        deps=agent_deps)
+        deps=agent_deps
+    )
 
     interviewer_message_history: List[ModelMessage] = []
     candidate_message_history: List[ModelMessage] = []

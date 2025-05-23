@@ -1,12 +1,16 @@
 from supabase import Client
 from datetime import datetime, timezone
+from supabase import create_client
+from config import SUPABASE_URL, SUPABASE_KEY
 
 from models.candidate import Candidate, CandidateProfile, ResumeSummary, Scorecard, CandidateEvaluation
 
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_candidate_by_id(
         candidate_id: str, 
-        supabase: Client) -> Candidate:
+    ) -> Candidate:
+
     result = supabase.table("candidates").select("*").eq("candidate_id", candidate_id).single().execute()
     data = result.data
 
@@ -47,8 +51,8 @@ def get_candidate_by_id(
 
 # update_candidate_by_id
 def update_candidate_by_id(
-        candidate: Candidate, 
-        supabase: Client) -> str:
+        candidate: Candidate
+    ) -> str:
     data = {}
 
     if candidate.parsed_resume:
