@@ -55,3 +55,66 @@ async def start_vapi_call(
 
 
     return response.json()
+
+
+async def end_vapi_call(call_id: str, control_url: str):
+    """
+    Ends an active VAPI call by sending the “end-call” control message.
+    - call_id: the UUID/SID for the call
+    - api_key: if your VAPI endpoint requires auth, pass it here
+    """
+
+    url = f"{control_url}/{call_id}/control"
+    headers = {
+        "Authorization": f"Bearer {VAPI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "type": "end-call"
+    }
+
+
+    logger.info(f"Ending VAPI call {call_id} with assistant {VAPI_RECRUITER_ASSISTANT_ID}")
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+
+    if response.status_code not in (200, 201):
+        logger.error(f"Failed to start VAPI call: {response.text}")
+        response.raise_for_status()
+    else:
+        logger.info(f"VAPI ended successfully: {response.json().get('id')}")
+
+
+async def get_vapi_call(call_id: str) -> str:
+    """
+    Fetch the VAPI call by its ID, extract the controlUrl, and
+    initialize a SessionState stored in session_store.
+
+    Args:
+        call_id: the VAPI call UUID
+        api_key: your VAPI Bearer token
+
+    Returns:
+        The newly created SessionState for this call_id.
+    """
+    # 1. Fetch call metadata from VAPI
+    url = f"{VAPI_API_BASE_URL}/call/{call_id}"
+    headers = {
+        "Authorization": f"Bearer {VAPI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+
+    if response.status_code not in (200, 201):
+        logger.error(f"Failed to fetch VAPI call: {response.text}")
+        response.raise_for_status()
+    else:
+        logger.info(f"VAPI call fetched successfully: {response.json().get('id')}")
+
+    print(response.json())
+
+    return response.json()

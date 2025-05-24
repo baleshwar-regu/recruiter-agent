@@ -1,3 +1,11 @@
+import logging
+
+# 1. Configure the root logger
+logging.basicConfig(
+    level=logging.INFO,  
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+)
+
 import uvicorn
 from config import VAPI_EXPOSE_PORT
 

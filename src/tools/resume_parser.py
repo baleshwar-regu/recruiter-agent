@@ -8,6 +8,7 @@ import json
 from typing import Any
 from pydantic import ValidationError
 from models.candidate import ResumeSummary
+import re
 
 # Suppress noisy PDF parser logs
 logging.getLogger("pdfminer").setLevel(logging.ERROR)
@@ -43,7 +44,8 @@ def parse_resume_summary(json_str: str) -> ResumeSummary:
     parse it into a ResumeSummary instance (or raise on validation error).
     """
     try:
-        payload: Any = json.loads(json_str)
+        sanitized_json = sanitize_llm_json(json_str)
+        payload: Any = json.loads(sanitized_json)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON returned by LLM: {e}")
 
@@ -54,3 +56,23 @@ def parse_resume_summary(json_str: str) -> ResumeSummary:
         raise ValueError(f"ResumeSummary validation error: {ve}")
 
     return summary
+
+def sanitize_llm_json(raw: str) -> str:
+    """
+    1. Strip Markdown code fences (```json …```)
+    2. Extract the first {...} block
+    3. Remove any trailing commas before ] or }
+    """
+    # 1. Remove markdown fences
+    raw = re.sub(r"```(?:json)?\s*", "", raw)
+    raw = raw.replace("```", "")
+
+    # 2. Extract the first {...} substring
+    match = re.search(r"\{.*\}", raw, flags=re.DOTALL)
+    if match:
+        raw = match.group(0)
+
+    # 3. Remove trailing commas:  "item", ]  →  "item" ]
+    raw = re.sub(r",\s*(?=[}\]])", "", raw)
+
+    return raw
