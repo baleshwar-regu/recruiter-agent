@@ -7,6 +7,7 @@ load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")
 
 RESUME_LLM_MODEL = os.getenv("RESUME_LLM_MODEL")
 INTERVIEW_LLM_MODEL = os.getenv("INTERVIEW_LLM_MODEL")

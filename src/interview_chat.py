@@ -1,7 +1,7 @@
 import asyncio
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY
-from agents.agent_config import AgentDependencies
+from models.agent_dependencies import AgentDependencies
 from agents.resume_agent import resume_agent
 from agents.interview_agent import interview_agent
 from db.candidate_repository import get_candidate_by_id, update_candidate_by_id

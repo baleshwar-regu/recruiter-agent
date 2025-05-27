@@ -6,6 +6,9 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s"
 )
 
+# 2. Silence noisy httpx logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 import uvicorn
 from config import VAPI_EXPOSE_PORT
 
@@ -14,5 +17,6 @@ if __name__ == "__main__":
         "src.api.main:app", 
         host="0.0.0.0", 
         port=VAPI_EXPOSE_PORT, 
-        reload=True
+        reload=True,
+        reload_excludes=[".venv/*", "__pycache__/*", ".mypy_cache/*"]
     )

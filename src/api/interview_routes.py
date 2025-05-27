@@ -1,104 +1,61 @@
-from fastapi import APIRouter, Request, BackgroundTasks
-from pydantic import BaseModel
+from fastapi import APIRouter, Request, BackgroundTasks, HTTPException
+from models.session_state import SessionState
+from models.session_state import session_store
+from models.vapi_request import VAPIRequest
 from tools.vapi_client import start_vapi_call, end_vapi_call, get_vapi_call
-from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
+from db.candidate_repository import get_candidate_by_id, update_candidate_by_id, upsert_candidate_from_calendly
 from models.candidate import Candidate, CandidateProfile
-from agents.agent_config import AgentDependencies
+from models.agent_dependencies import AgentDependencies
 from agents.resume_agent import resume_agent
 from agents.interview_agent import interview_agent
 from agents.evaluation_agent import evaluation_agent
 import logging
-from pydantic import BaseModel
-from typing import Dict, List
 import json
 from fastapi.responses import StreamingResponse
-from pydantic_ai.messages import ModelMessage
 from datetime import datetime, timezone
-from dataclasses import dataclass, field
-from typing import Any
 import re
 from tools.resume_parser import parse_resume_summary
 import asyncio
+from tools.scheduler import scheduler, start_scheduler, schedule_interview, cancel_interview
+from zoneinfo import ZoneInfo
+from tools.calendly_handler import dispatch_event, extract_event_id
+from services.interview import run_interview
+from typing import List
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+start_scheduler()
 
-class Call(BaseModel):
-    id: str
-    type: str
+@router.post("/calendly-webhook")
+async def calendly_webhook(request: Request):
+    body = await request.json()
+    event_type = body.get("event")
 
-class Message(BaseModel):
-    role: str
-    content: str
+    payload = body.get("payload", {})
+    event_url = payload.get("event")
+    event = extract_event_id(event_url)
+    logger.info(f"Incoming Calendly event_type: {event_type} event: {event}")
 
-class VAPIRequest(BaseModel):
-    model: str
-    call: Call
-    messages: List[Message]
-    temperature: float
-    max_tokens: int
-    metadata: dict
-    timestamp: int
-    stream: bool
+    try:
+        result = dispatch_event(event_type, payload)
+        candidate_id = result["candidate_id"]
 
-@dataclass
-class SessionState:
-    agent: Any
-    agent_dependencies: AgentDependencies
-    message_history: List[ModelMessage]
-    start_time: datetime
-    control_url: str
-    transcript: List[Dict[str, str]] = field(default_factory=list)
+        if event_type == "invitee.created":
+            schedule_interview(candidate_id, event, result["scheduled_time"])
+        elif event_type == "invitee.canceled":
+            cancel_interview(candidate_id, event)
 
-# Session store for multiple callers
-session_store: dict[str, SessionState] = {}
+        return {"status": result["status"], "candidate_id": candidate_id}
+
+    except Exception as e:
+        logger.exception(f"[Webhook Error] {e}")
+        raise HTTPException(status_code=500, detail="Calendly webhook failed to process")
+    
 
 @router.post("/start/{candidate_id}")
 async def start_interview(candidate_id: str):
-
-    candidate = get_candidate_by_id(candidate_id)
-
-    agent_deps = AgentDependencies(
-        candidate=candidate
-    )
-
-    resume_agent_message = "analyze the resume for the candidate"
-    resume_agent_response = await resume_agent.run(
-        resume_agent_message, 
-        deps=agent_deps
-    )
-    print(f"Resume Summary output from LLM {resume_agent_response.output}")
-    resume_summary = parse_resume_summary(resume_agent_response.output)
-    print(f"Resume summary: {resume_summary}")
-
-    candidate.resume_summary = resume_summary
-    candidate.status = "RESUME_SUMMARY_GENERATED"
-
-    update_candidate_by_id(candidate=candidate)
-
-    call_response = await start_vapi_call(
-        candidate_id=candidate.profile.candidate_id,
-        phone_number=candidate.profile.phone,
-        greeting=f"Hello.. am I speaking with {candidate.profile.name}"
-    )
-
-    call_id     = call_response["id"]
-    control_url = call_response["monitor"]["controlUrl"]
-
-    deps = AgentDependencies(candidate=candidate)
-
-    # Initialize the session
-    session_store[call_id] = SessionState(
-        agent=interview_agent,
-        agent_dependencies=deps,
-        message_history=[],
-        start_time=datetime.now(timezone.utc),
-        control_url=control_url,
-    )
-    logger.info(f"Started new session with session_id: {call_id}")
-
-    return {"status": "call_started", "vapi_response": call_response}
+    return await run_interview(candidate_id)
 
 
 @router.post("/chat/completions")
@@ -186,6 +143,17 @@ async def vapi_webhook(
             "Connection":    "keep-alive",
         },
     )
+
+@router.get("/scheduled-interviews", response_model=List[dict])
+def list_scheduled_jobs():
+    jobs_info = []
+    for job in scheduler.get_jobs():
+        jobs_info.append({
+            "job_id": job.id,
+            "next_run_time": job.next_run_time.isoformat() if job.next_run_time else None,
+            "name": job.name,
+        })
+    return jobs_info
 
 def post_interview_tasks(session_id: str):
     """
@@ -279,3 +247,5 @@ def create_session_from_call_data(call_data: dict) -> SessionState:
 
     session_store[call_id] = session
     return session
+
+

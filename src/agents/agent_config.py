@@ -1,12 +1,4 @@
 
-from dataclasses import dataclass
-from supabase import Client as SupabaseClient
-from models.candidate import Candidate
-
-@dataclass
-class AgentDependencies:
-    candidate: Candidate
-
 RESUME_AGENT_PROMPT = """
 
 You are an AI Resume Analyzer. You have access to the full resume text. Your goal is to:

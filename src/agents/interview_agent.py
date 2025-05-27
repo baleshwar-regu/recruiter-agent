@@ -1,7 +1,8 @@
 import logfire
 from pydantic_ai import Agent, RunContext
 from config import INTERVIEW_LLM_MODEL, OPENAI_KEY
-from agents.agent_config import INTERVIEW_AGENT_PROMPT, AgentDependencies
+from agents.agent_config import INTERVIEW_AGENT_PROMPT
+from models.agent_dependencies import AgentDependencies
 
 # Configure logging
 logfire.configure(send_to_logfire='if-token-present')

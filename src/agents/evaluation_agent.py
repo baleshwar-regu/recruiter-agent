@@ -1,8 +1,9 @@
 import logfire
 from pydantic_ai import Agent, RunContext
 from config import EVALUATION_LLM_MODEL, OPENAI_KEY
+from models.agent_dependencies import AgentDependencies
 from models.candidate import CandidateEvaluation
-from agents.agent_config import EVALUATION_AGENT_PROMPT, AgentDependencies
+from agents.agent_config import EVALUATION_AGENT_PROMPT
 from db.candidate_repository import update_candidate_by_id
 
 # Configure logging

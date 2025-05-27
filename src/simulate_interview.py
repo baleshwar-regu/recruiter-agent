@@ -4,7 +4,7 @@ from typing import List
 from pydantic import Field
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage
-from agents.agent_config import AgentDependencies
+from models.agent_dependencies import AgentDependencies
 from agents.resume_agent import resume_agent
 from agents.interview_agent import interview_agent
 from agents.evaluation_agent import evaluation_agent

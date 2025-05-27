@@ -2,7 +2,7 @@ import time
 from typing import List, Tuple
 from pydantic_ai.messages import ModelMessage
 from agents.interview_agent import interview_agent
-from agents.agent_config import AgentDependencies
+from models.agent_dependencies import AgentDependencies
 from db.candidate_repository import get_candidate_by_id
 from config import SUPABASE_URL, SUPABASE_KEY
 from supabase import create_client

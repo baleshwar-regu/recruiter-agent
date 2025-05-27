@@ -1,7 +1,8 @@
-from supabase import Client
 from datetime import datetime, timezone
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY
+import uuid
+from typing import Optional
 
 from models.candidate import Candidate, CandidateProfile, ResumeSummary, Scorecard, CandidateEvaluation
 
@@ -56,10 +57,12 @@ def update_candidate_by_id(
     data = {}
 
     if candidate.parsed_resume:
-        data["parsed_resume"] = candidate.parsed_resume
+        data["parsed_resume"] = clean_null_bytes(candidate.parsed_resume)
 
     if candidate.resume_summary:
-        data.update(candidate.resume_summary.model_dump(exclude_none=True))
+        raw_summary = candidate.resume_summary.model_dump(exclude_none=True)
+        cleaned_summary = {k: clean_null_bytes(v) for k, v in raw_summary.items()}
+        data.update(cleaned_summary)
 
     if candidate.evaluation:
         data["scorecard"] = candidate.evaluation.scorecard.model_dump()
@@ -83,3 +86,63 @@ def update_candidate_by_id(
         .execute()
 
     return response
+
+def normalize_phone(phone_str: str, default_country: str = "IN") -> str:
+    import phonenumbers
+    try:
+        parsed = phonenumbers.parse(phone_str, default_country)
+        if not phonenumbers.is_valid_number(parsed):
+            raise ValueError("Invalid phone number")
+        return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+    except Exception as e:
+        print(f"Phone normalization error: {e}")
+        return None
+
+def upsert_candidate_from_calendly(
+    name: str,
+    email: str,
+    phone: str,
+    scheduled_time: Optional[datetime],
+    status: str = "INTERVIEW_SCHEDULED"
+) -> str:
+    candidate_id = None
+
+    if phone:
+        result = supabase.table("candidates").select("candidate_id").eq("phone", phone).execute()
+        if result.data:
+            candidate_id = result.data[0]["candidate_id"]
+
+    if not candidate_id and email:
+        result = supabase.table("candidates").select("candidate_id").eq("email", email).execute()
+        if result.data:
+            candidate_id = result.data[0]["candidate_id"]
+
+    data = {
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "status": status,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    if scheduled_time:
+        data["scheduled_time"] = scheduled_time.isoformat()
+
+    if candidate_id:
+        supabase.table("candidates").update(data).eq("candidate_id", candidate_id).execute()
+    else:
+        candidate_id = str(uuid.uuid4())
+        data["candidate_id"] = candidate_id
+        data["created_at"] = datetime.now(timezone.utc).isoformat()
+        supabase.table("candidates").insert(data).execute()
+
+    return candidate_id
+
+def clean_null_bytes(value):
+    if isinstance(value, str):
+        return value.replace('\x00', '')
+    elif isinstance(value, list):
+        return [clean_null_bytes(v) for v in value]
+    elif isinstance(value, dict):
+        return {k: clean_null_bytes(v) for k, v in value.items()}
+    return value
