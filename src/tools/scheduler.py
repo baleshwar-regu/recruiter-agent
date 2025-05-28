@@ -1,11 +1,11 @@
 import logging
-import os
 from datetime import datetime
 
 from apscheduler.jobstores.base import JobLookupError
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from config import APSCHEDULER_DB_NAME, SUPABASE_DB_URL
 from services.interview import run_interview
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler(
     jobstores={
         "default": SQLAlchemyJobStore(
-            url=os.environ["SUPABASE_DB_URL"],
+            url=SUPABASE_DB_URL,
+            tablename=APSCHEDULER_DB_NAME,
             engine_options={
                 "pool_pre_ping": True
             },  # important for Supabase session pooler
@@ -44,7 +45,7 @@ def trigger_interview(candidate_id: str):
         else:
             asyncio.run(coro)
 
-    except Exception as e:
+    except Exception:
         logger.exception(f"[Trigger Interview Error] Failed for {candidate_id}")
 
 
