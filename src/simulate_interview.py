@@ -1,16 +1,16 @@
 import asyncio
-import time
 from typing import List
-from pydantic import Field
+
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage
-from agents.agent_config import AgentDependencies
-from agents.resume_agent import resume_agent
-from agents.interview_agent import interview_agent
+
 from agents.evaluation_agent import evaluation_agent
-from supabase import create_client
-from config import SUPABASE_URL, SUPABASE_KEY, INTERVIEW_LLM_MODEL, OPENAI_KEY
+from agents.interview_agent import interview_agent
+from agents.resume_agent import resume_agent
+from config import INTERVIEW_LLM_MODEL, OPENAI_KEY
 from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
+from models.agent_dependencies import AgentDependencies
+from tools.resume_parser import parse_resume_summary
 
 # Simulated candidate agent prompt template
 CANDIDATE_PROMPT_TEMPLATE = """
@@ -41,21 +41,28 @@ Respond ONLY with what you'd say out loud. One spoken voice reply. Nothing else.
 
 """
 
+
 async def simulate_interview(personality: str, skill: str):
 
     model = INTERVIEW_LLM_MODEL
     openai_key = OPENAI_KEY
-    supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    candidate = get_candidate_by_id(candidate_id="1", supabase=supabase_client)
 
-    agent_deps = AgentDependencies(
-        supabase=supabase_client, 
-        candidate=candidate)
-    
+    candidate = get_candidate_by_id(candidate_id="1")
+
+    agent_deps = AgentDependencies(candidate=candidate)
+
     resume_agent_message = "analyze the resume for the candidate"
-    await resume_agent.run(
-        resume_agent_message, 
-        deps=agent_deps)
+    resume_agent_response = await resume_agent.run(
+        resume_agent_message, deps=agent_deps
+    )
+
+    resume_summary = parse_resume_summary(resume_agent_response.output)
+    print(f"Resume summary: {resume_summary}")
+
+    candidate.resume_summary = resume_summary
+    candidate.status = "RESUME_SUMMARY_GENERATED"
+
+    update_candidate_by_id(candidate=candidate)
 
     interviewer_message_history: List[ModelMessage] = []
     candidate_message_history: List[ModelMessage] = []
@@ -64,26 +71,25 @@ async def simulate_interview(personality: str, skill: str):
 
     # Candidate Agent responds based on personality
     candidate_prompt = CANDIDATE_PROMPT_TEMPLATE.format(
-        personality=personality,
-        skill=skill
+        personality=personality, skill=skill
     )
 
     candidate_agent = Agent(
-        model = model,
-        system_prompt = candidate_prompt,
+        model=model,
+        system_prompt=candidate_prompt,
         temperature=0.3,
         deps_type=AgentDependencies,
         output_type=str,
-        instrument=True
+        instrument=True,
     )
 
     turn_counter = 0
 
     def get_elapsed_minutes():
-        nonlocal turn_counter       # ← tell Python to bind to the outer turn_counter
+        nonlocal turn_counter  # ← tell Python to bind to the outer turn_counter
         turn_counter += 1
         return turn_counter * 1
- 
+
     # Interview loop
     while True:
         elapsed = get_elapsed_minutes()
@@ -104,16 +110,16 @@ async def simulate_interview(personality: str, skill: str):
         interviewer_response = await interview_agent.run(
             user_prompt=interviewer_input,
             deps=agent_deps,
-            message_history=interviewer_message_history
+            message_history=interviewer_message_history,
         )
 
         interviewer = interviewer_response.output.strip()
-        
+
         if interviewer.find("[END_OF_INTERVIEW_END_CALL]") > 0:
             # await vapi.speak(interviewer.replace("[END_OF_INTERVIEW_END_CALL]", ""), ctx.deps.call_id)
             # end vapi call
             # await vapi.hangup_call(ctx.deps.call_id)
-            
+
             transcript.append({"role": "interviewer", "content": interviewer})
             print(f"Interviewer [END_OF_INTERVIEW_END_CALL]: {interviewer}")
             break
@@ -126,41 +132,40 @@ async def simulate_interview(personality: str, skill: str):
         candidate_response = await candidate_agent.run(
             user_prompt=interviewer,
             deps=agent_deps,
-            message_history=candidate_message_history
-            )
-        
+            message_history=candidate_message_history,
+        )
+
         candidate_text = candidate_response.output.strip()
         transcript.append({"role": "candidate", "content": candidate_text})
         candidate_message_history = candidate_response.all_messages()
         print(f"Candidate: {candidate_text}")
-        
+
         interviewer_message = candidate_text
 
-
     # Feed the transcript to recommendation agent
-    full_transcript = "\n".join([
-        f"[{t['role'].capitalize()}: {t['content']}" for t in transcript
-    ])
+    full_transcript = "\n".join(
+        [f"[{t['role'].capitalize()}: {t['content']}" for t in transcript]
+    )
 
     candidate.interview_transcript = full_transcript
     candidate.status = "INTERVIEW_COMPLETE"
 
-    update_candidate_by_id(
-        candidate=candidate, 
-        supabase=supabase_client)
+    update_candidate_by_id(candidate=candidate)
 
     evaluation_response = await evaluation_agent.run(
-        user_prompt=full_transcript,
-        deps=agent_deps
-        )
+        user_prompt=full_transcript, deps=agent_deps
+    )
 
     print(f"Evaluation results {evaluation_response.output}")
 
+
 if __name__ == "__main__":
-    asyncio.run(simulate_interview(
-        personality="high in confidence, strong communication",
-        skill="very week in .net/c#, weak in concepts and system design, vague technical understanding in architecture"
-        ))
+    asyncio.run(
+        simulate_interview(
+            personality="high in confidence, strong communication",
+            skill="expert in .net/c#/sql, strong in concepts and system design",
+        )
+    )
 
 # not a strong developer, provides short, weak and wrong answers, very low on confidence
 # frequently asks follow up questions
@@ -172,11 +177,11 @@ if __name__ == "__main__":
 # steering outside of interview, hitting on the interviewer
 
 
-        # personality="low in confidence, poor communication",
-        # skill="no experience with .net/c#/sql, weak in concepts and system design"
+# personality="low in confidence, poor communication",
+# skill="no experience with .net/c#/sql, weak in concepts and system design"
 
-        # personality="high in confidence, strong communication",
-        # skill="expert in .net/c#/sql, strong in concepts and system design"
+# personality="high in confidence, strong communication",
+# skill="expert in .net/c#/sql, strong in concepts and system design"
 
-        # personality="high in confidence, strong communication",
-        # skill="very week in .net/c#, poor in technical Q&A, weak in concepts and system design, vague technical understanding in architecture"
+# personality="high in confidence, strong communication",
+# skill="very week in .net/c#, poor in technical Q&A, weak in concepts and system design, vague technical understanding in architecture"

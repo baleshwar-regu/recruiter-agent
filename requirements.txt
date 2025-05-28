@@ -3,3 +3,8 @@ logfire==3.14.1
 supabase==2.15.1
 python-docx==1.1.2
 pytest-asyncio==0.26.0
+APScheduler==3.11.0
+phonenumbers==9.0.5
+SQLAlchemy==2.0.41
+isort
+black
