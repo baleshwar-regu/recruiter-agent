@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 start_scheduler()
 
+@router.get("/healthz")
+def health_check():
+    return {"status": "ok"}
 
 @router.post("/calendly-webhook")
 async def calendly_webhook(request: Request):

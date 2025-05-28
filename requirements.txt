@@ -6,5 +6,6 @@ pytest-asyncio==0.26.0
 APScheduler==3.11.0
 phonenumbers==9.0.5
 SQLAlchemy==2.0.41
+fastapi==0.115.12
 isort
 black
