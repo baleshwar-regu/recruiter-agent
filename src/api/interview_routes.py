@@ -159,10 +159,9 @@ async def vapi_webhook(req: VAPIRequest, background_tasks: BackgroundTasks):
     async def stream():
         yield f"data: {json.dumps(final_response)}\n\n"
         yield "data: [DONE]\n\n"
-
-    # If interview is over, schedule post-call tasks
-    if should_end:
-        background_tasks.add_task(post_interview_tasks, session_id, True)
+        # If interview is over, schedule post-call tasks
+        if should_end:
+            background_tasks.add_task(post_interview_tasks, session_id, True)
 
     return StreamingResponse(
         stream(),
