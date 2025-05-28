@@ -1,4 +1,9 @@
+import sys
+import os
 import logging
+
+if os.getenv("RENDER", "false").lower() != "true":
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
 
 # 1. Configure the root logger
 logging.basicConfig(
@@ -14,7 +19,7 @@ from config import APPLICATION_PORT
 
 if __name__ == "__main__":
     uvicorn.run(
-        "src.api.main:app",
+        "api.main:app",
         host="0.0.0.0",
         port=APPLICATION_PORT,
         reload=True,
