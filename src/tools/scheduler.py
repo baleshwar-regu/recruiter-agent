@@ -11,7 +11,14 @@ from services.interview import run_interview
 logger = logging.getLogger(__name__)
 
 scheduler = BackgroundScheduler(
-    jobstores={"default": SQLAlchemyJobStore(url=os.environ["SUPABASE_DB_URL"])},
+    jobstores={
+        "default": SQLAlchemyJobStore(
+            url=os.environ["SUPABASE_DB_URL"],
+            engine_options={
+                "pool_pre_ping": True
+            },  # important for Supabase session pooler
+        )
+    },
     timezone="UTC",
 )
 

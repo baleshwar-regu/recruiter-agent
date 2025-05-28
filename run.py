@@ -1,5 +1,3 @@
-import sys
-import os
 import logging
 
 # 1. Configure the root logger
