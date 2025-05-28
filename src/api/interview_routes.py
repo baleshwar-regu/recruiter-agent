@@ -23,6 +23,7 @@ from tools.scheduler import (
     start_scheduler,
 )
 from tools.vapi_client import end_vapi_call, get_vapi_call
+from config import CALENDLY_MEETING_URL
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,16 @@ def health_check():
 @router.post("/calendly-webhook")
 async def calendly_webhook(request: Request):
     body = await request.json()
+    logging.info(f"full event from calendly {body}")
     event_type = body.get("event")
+
+    interview_meeting_url = body.get("payload", {}).get("scheduled_event", {}).get("event_type")
+    logging.info(f"Calendly meeting url {interview_meeting_url}")
+
+    # only proceed if meeting is for interview
+    if interview_meeting_url != CALENDLY_MEETING_URL:
+        logging.info(f"Received calendly event for a different meeting")
+        return {"status": "ok"}
 
     payload = body.get("payload", {})
     event_url = payload.get("event")
@@ -188,6 +198,14 @@ def list_scheduled_jobs():
         )
     return jobs_info
 
+@router.delete("/scheduled-interviews/{job_id}")
+def delete_scheduled_job(job_id: str):
+    job = scheduler.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"No scheduled job with id: {job_id}")
+    
+    scheduler.remove_job(job_id)
+    return {"message": f"Job {job_id} successfully deleted"}
 
 def post_interview_tasks(session_id: str, end_call: bool = True):
     """
