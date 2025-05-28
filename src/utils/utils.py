@@ -1,5 +1,6 @@
 import phonenumbers
 
+
 def normalize_phone(phone_str: str, default_country: str = "US") -> str:
     try:
         parsed = phonenumbers.parse(phone_str, default_country)

@@ -1,9 +1,10 @@
-from models.agent_dependencies import AgentDependencies
-
-from pydantic_ai.messages import ModelMessage
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List
+
+from pydantic_ai.messages import ModelMessage
+
+from models.agent_dependencies import AgentDependencies
 
 
 @dataclass

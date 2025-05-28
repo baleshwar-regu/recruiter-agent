@@ -1,6 +1,5 @@
 import os
 
-# Third-party library imports
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,6 +7,7 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL")
+SUPABASE_DB = os.getenv("SUPABASE_DB")
 
 RESUME_LLM_MODEL = os.getenv("RESUME_LLM_MODEL")
 INTERVIEW_LLM_MODEL = os.getenv("INTERVIEW_LLM_MODEL")
@@ -19,4 +19,7 @@ VAPI_API_BASE_URL = os.getenv("VAPI_API_BASE_URL")
 VAPI_PHONE_NUMBER_ID = os.getenv("VAPI_PHONE_NUMBER_ID")
 VAPI_RECRUITER_ASSISTANT_ID = os.getenv("VAPI_RECRUITER_ASSISTANT_ID")
 VAPI_INTERVIEW_WEBHOOK_URL = os.getenv("VAPI_INTERVIEW_WEBHOOK_URL")
-VAPI_EXPOSE_PORT = int(os.getenv("VAPI_EXPOSE_PORT"))
+VAPI_CALL_WEBHOOK_URL = os.getenv("VAPI_CALL_WEBHOOK_URL")
+
+APPLICATION_BASE_URL = os.getenv("APPLICATION_BASE_URL")
+APPLICATION_PORT = int(os.getenv("APPLICATION_PORT"))

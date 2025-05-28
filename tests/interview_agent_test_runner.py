@@ -1,11 +1,13 @@
 import time
 from typing import List, Tuple
+
 from pydantic_ai.messages import ModelMessage
-from agents.interview_agent import interview_agent
-from models.agent_dependencies import AgentDependencies
-from db.candidate_repository import get_candidate_by_id
-from config import SUPABASE_URL, SUPABASE_KEY
 from supabase import create_client
+
+from agents.interview_agent import interview_agent
+from config import SUPABASE_KEY, SUPABASE_URL
+from db.candidate_repository import get_candidate_by_id
+from models.agent_dependencies import AgentDependencies
 
 PERSONA_RESPONSES = {
     "strong": {
@@ -24,7 +26,7 @@ PERSONA_RESPONSES = {
         "Indexing": "I typically use composite and filtered indexes for performance.",
         "CI_CD": "We use multi-stage YAML pipelines in Azure DevOps with automated testing.",
         "DevOps": "We follow GitFlow, use pull request validation, and deploy using pipelines.",
-        "Questions": "What are the next steps in the hiring process?"
+        "Questions": "What are the next steps in the hiring process?",
     },
     "mediocre": {
         "Greeting": "I'm fine, yeah this works.",
@@ -42,7 +44,7 @@ PERSONA_RESPONSES = {
         "Indexing": "I think indexes help make queries faster.",
         "CI_CD": "Used Jenkins before but not deeply involved.",
         "DevOps": "We push to Git and someone merges it. Then it goes live.",
-        "Questions": "Not really, all clear."
+        "Questions": "Not really, all clear.",
     },
     "weak": {
         "Greeting": "Yeah I'm here. Let's go.",
@@ -60,24 +62,25 @@ PERSONA_RESPONSES = {
         "Indexing": "I don't think we use indexing.",
         "CI_CD": "I'm not involved in that part.",
         "DevOps": "We don't have a process, we just push.",
-        "Questions": "Nope."
-    }
+        "Questions": "Nope.",
+    },
 }
+
 
 async def run_interview_test(persona_name: str) -> List[Tuple[str, str]]:
     supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
     candidate = get_candidate_by_id(candidate_id="1", supabase=supabase_client)
 
-    agent_deps = AgentDependencies(
-        supabase=supabase_client,
-        candidate=candidate
-    )
+    agent_deps = AgentDependencies(supabase=supabase_client, candidate=candidate)
 
     responses = PERSONA_RESPONSES[persona_name]
     message_history: List[ModelMessage] = []
 
     prompts = [
-        ("Greeting", "Begin with a greeting, confirm timing, introduce BIGO1 and Bain, and describe the role."),
+        (
+            "Greeting",
+            "Begin with a greeting, confirm timing, introduce BIGO1 and Bain, and describe the role.",
+        ),
         ("StatusCheck", "Ask if the candidate has interviewed with Bain."),
         ("ExperienceYears", "Ask about total years of experience."),
         ("CurrentProject", "Ask about their current project."),
@@ -86,13 +89,16 @@ async def run_interview_test(persona_name: str) -> List[Tuple[str, str]]:
         ("TechChoices", "Ask about tech/tool choices."),
         ("TradeOffs", "Ask about design trade-offs."),
         ("Cloud", "Ask about cloud platform experience."),
-        ("DistributedSystems", "Ask about distributed systems or real-time experience."),
+        (
+            "DistributedSystems",
+            "Ask about distributed systems or real-time experience.",
+        ),
         ("CSharp", "Ask a close-ended C#/.NET question."),
         ("SQL", "Ask a close-ended SQL question."),
         ("Indexing", "Ask a close-ended indexing question."),
         ("CI_CD", "Ask a close-ended CI/CD workflow question."),
         ("DevOps", "Ask about how they manage dev, test, and deployment."),
-        ("Questions", "Ask if they have any questions before wrapping up.")
+        ("Questions", "Ask if they have any questions before wrapping up."),
     ]
 
     start_time = time.time()
@@ -110,9 +116,7 @@ async def run_interview_test(persona_name: str) -> List[Tuple[str, str]]:
         """
 
         response = await interview_agent.run(
-            user_prompt=message,
-            deps=agent_deps,
-            message_history=message_history
+            user_prompt=message, deps=agent_deps, message_history=message_history
         )
         message_history = response.all_messages()
         outputs.append((instruction, response.output))

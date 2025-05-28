@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from api.interview_routes import router as interview_router
-import uvicorn
-from config import VAPI_EXPOSE_PORT
 
 app = FastAPI(title="Recruiter Voice Agent")
 

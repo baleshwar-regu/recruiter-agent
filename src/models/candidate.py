@@ -1,15 +1,18 @@
+from typing import List, Literal, Optional
+
 from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
+
 
 class CandidateProfile(BaseModel):
     candidate_id: str
     name: str
     email: str
     phone: str
-    position: Optional[str] = None
-    client_name: Optional[str] = None
+    job_title: Optional[str] = None
+    current_employer: Optional[str] = None
     resume_file_name: Optional[str] = None
     resume_url: Optional[str] = None
+
 
 class ResumeSummary(BaseModel):
     experience_summary: Optional[str] = None
@@ -21,6 +24,7 @@ class ResumeSummary(BaseModel):
     potential_flags: List[str] = Field(default_factory=list)
     resume_notes: Optional[str] = None
 
+
 class Scorecard(BaseModel):
     system_design: int = Field(..., ge=1, le=5)
     hands_on_coding: int = Field(..., ge=1, le=5)
@@ -29,10 +33,12 @@ class Scorecard(BaseModel):
     ownership: int = Field(..., ge=1, le=5)
     problem_solving: int = Field(..., ge=1, le=5)
 
+
 class CandidateEvaluation(BaseModel):
     scorecard: Scorecard
     summary: Optional[str] = None
     recommendation: Optional[Literal["Recommend", "Not Recommend"]] = None
+
 
 class Candidate(BaseModel):
     profile: CandidateProfile
