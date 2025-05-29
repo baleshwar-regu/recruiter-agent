@@ -16,20 +16,20 @@ from tools.resume_parser import parse_resume_summary
 async def main():
 
     supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    candidate = get_candidate_by_id(candidate_id="1")
+    candidate = get_candidate_by_id(candidate_id="34d21a7f-7376-4032-bb12-c357d6687a62")
 
     agent_deps = AgentDependencies(candidate=candidate)
 
-    message = "analyze the resume for the candidate"
-    response = await resume_agent.run(message, deps=agent_deps)
+    # message = "analyze the resume for the candidate"
+    # response = await resume_agent.run(message, deps=agent_deps)
 
-    resume_summary = parse_resume_summary(response.output)
-    print(f"Resume summary: {resume_summary}")
+    # resume_summary = parse_resume_summary(response.output)
+    # print(f"Resume summary: {resume_summary}")
 
-    candidate.resume_summary = resume_summary
-    candidate.status = "RESUME_SUMMARY_GENERATED"
+    # candidate.resume_summary = resume_summary
+    # candidate.status = "RESUME_SUMMARY_GENERATED"
 
-    response = update_candidate_by_id(candidate=candidate)
+    # response = update_candidate_by_id(candidate=candidate)
 
     start_time = time.time()
 
