@@ -95,7 +95,7 @@ async def start_interview(candidate_id: str):
 
 
 @router.post("/chat/completions")
-async def vapi_webhook(req: VAPIRequest, background_tasks: BackgroundTasks):
+async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTasks):
     session_id = str(req.call.id)
     candidate_response = req.messages[-1].content
 
