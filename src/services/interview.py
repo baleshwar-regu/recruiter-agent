@@ -9,10 +9,23 @@ from tools.vapi_client import start_vapi_call
 
 logger = logging.getLogger(__name__)
 
+def extract_first_name(full_name: str) -> str:
+    """
+    Extracts the first non-initial word from a full name string.
+    Skips over initials like 'J.' or 'A.' and capitalizes the result.
+    Assumes at least one valid word exists.
+    """
+    return next(
+        part.capitalize()
+        for part in full_name.strip().split()
+        if len(part) > 1 and not part.endswith(".")
+    )
+
 
 async def run_interview(candidate_id: str):
     candidate = get_candidate_by_id(candidate_id)
-
+    first_name = extract_first_name(candidate.profile.name)
+                
     # commented for real interviews
     # agent_deps = AgentDependencies(candidate=candidate)
 
@@ -33,7 +46,7 @@ async def run_interview(candidate_id: str):
     call_response = await start_vapi_call(
         candidate_id=candidate.profile.candidate_id,
         phone_number=candidate.profile.phone,
-        greeting=f"Hello.. am I speaking with {candidate.profile.name}",
+        greeting=f"Hello.. am I speaking with {first_name}?",
     )
 
     call_id = call_response["id"]
