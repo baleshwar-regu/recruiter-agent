@@ -211,7 +211,7 @@ def delete_scheduled_job(job_id: str):
     return {"message": f"Job {job_id} successfully deleted"}
 
 
-def post_interview_tasks(session_id: str, end_call: bool = True):
+async def post_interview_tasks(session_id: str, end_call: bool = True):
     """
     Background task to run after the HTTP response is sent.
     1. Hang up the VAPI call
@@ -226,7 +226,9 @@ def post_interview_tasks(session_id: str, end_call: bool = True):
     # only end_call if not initiated by caller
     if end_call:
         try:
-            asyncio.run(end_vapi_call(call_id=session_id, control_url=control_url))
+            logger.info(f"[{session_id}] Waiting 10s before ending call...")
+            await asyncio.sleep(10)
+            await end_vapi_call(call_id=session_id, control_url=control_url)
             logger.info(f"Ended call: {session_id}")
         except Exception as e:
             logger.error(f"Error ending call {session_id}: {e}")
@@ -247,9 +249,7 @@ def post_interview_tasks(session_id: str, end_call: bool = True):
     # 5) Run the evaluation agent
     # Since this is sync, spin up a fresh loop
     try:
-        result = asyncio.run(
-            evaluation_agent.run(user_prompt=full_transcript, deps=deps)
-        )
+        result = await evaluation_agent.run(user_prompt=full_transcript, deps=deps)
         logger.info(f"Evaluation results: {result.output}")
     except Exception as e:
         logger.error(f"[Error] running evaluation_agent: {e}")
