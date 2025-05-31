@@ -36,13 +36,14 @@ def parse_agent_output(raw_output: str):
         response = json.loads(raw_output)
         agent_response = response.get("agent_response", "").strip()
         turn_outcome = response.get("turn_outcome", "").strip().upper()
+        turn_outcome_reasoning = response.get("turn_outcome_reasoning", "").strip()
 
         valid_outcomes = {
             "NORMAL",
             "WRAP_UP",
             "GATEKEEPER_FAILURE_ALREADY_INTERVIEWED",
             "GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE",
-            "INAPPROPRIATE",
+            "CANDIDATE_REQUESTING_END_CALL",
         }
 
         if not agent_response:
@@ -51,10 +52,14 @@ def parse_agent_output(raw_output: str):
         if turn_outcome not in valid_outcomes:
             turn_outcome = "NORMAL"
 
+        if not turn_outcome_reasoning:
+            turn_outcome_reasoning = "NO_TURN_OUTCOME_REASONING_PROVIDED"
+
         should_end = turn_outcome in {
             "GATEKEEPER_FAILURE_ALREADY_INTERVIEWED",
             "GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE",
-            "WRAP_UP",
+            "CANDIDATE_REQUESTING_END_CALL",
+            "WRAP_UP"
         }
 
         # Override final agent response if it's a known terminal state
@@ -70,7 +75,7 @@ def parse_agent_output(raw_output: str):
                 "for other opportunities. Take care!"
             )
 
-        return agent_response, turn_outcome, should_end
+        return agent_response, turn_outcome, turn_outcome_reasoning, should_end
 
     except json.JSONDecodeError:
         return (
@@ -184,11 +189,11 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
     response = await agent.run(prompt, deps=deps, message_history=history)
     raw_output = response.output
 
-    agent_response, turn_outcome, should_end = parse_agent_output(raw_output)
+    agent_response, turn_outcome, turn_outcome_reasoning, should_end = parse_agent_output(raw_output)
 
     tts_reply = normalize_for_tts(agent_response)
     logger.info(
-        f"[{session_id}] role: interviewer, turn_outcome: {turn_outcome}, content: {tts_reply}"
+        f"[{session_id}] role: interviewer, turn_outcome: {turn_outcome}, turn_outcome_reasoning: {turn_outcome_reasoning}, content: {tts_reply}"
     )
     # Record interviewer turn
     session.transcript.append({"role": "interviewer", "content": agent_response})
