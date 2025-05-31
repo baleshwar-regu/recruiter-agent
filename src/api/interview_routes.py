@@ -31,6 +31,55 @@ router = APIRouter()
 start_scheduler()
 
 
+def parse_agent_output(raw_output: str):
+    try:
+        response = json.loads(raw_output)
+        agent_response = response.get("agent_response", "").strip()
+        turn_outcome = response.get("turn_outcome", "").strip().upper()
+
+        valid_outcomes = {
+            "NORMAL",
+            "WRAP_UP",
+            "GATEKEEPER_FAILURE_ALREADY_INTERVIEWED",
+            "GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE",
+            "INAPPROPRIATE",
+        }
+
+        if not agent_response:
+            agent_response = "I couldn't quite get that, please repeat what you said.."
+
+        if turn_outcome not in valid_outcomes:
+            turn_outcome = "NORMAL"
+
+        should_end = turn_outcome in {
+            "GATEKEEPER_FAILURE_ALREADY_INTERVIEWED",
+            "GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE",
+            "WRAP_UP",
+        }
+
+        # Override final agent response if it's a known terminal state
+        if turn_outcome == "GATEKEEPER_FAILURE_ALREADY_INTERVIEWED":
+            agent_response = (
+                "I appreciate you letting me know. Since you've already interviewed with Bain, "
+                "I don't want to duplicate efforts. Thank you for your time today—I'll close us out here."
+            )
+        elif turn_outcome == "GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE":
+            agent_response = (
+                "Thanks for being upfront. Bain has a strict three-day in-office policy, "
+                "so this role wouldn't be a fit. I'll wrap up our call now, and we'll keep you in mind "
+                "for other opportunities. Take care!"
+            )
+
+        return agent_response, turn_outcome, should_end
+
+    except json.JSONDecodeError:
+        return (
+            "I couldn't quite get that, please repeat what you said..",
+            "NORMAL",
+            False,
+        )
+
+
 @router.get("/healthz")
 def health_check():
     return {"status": "ok"}
@@ -129,26 +178,21 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
     if not history:
         prompt += candidate_intro + "\n"
 
-    prompt += (
-        f'Candidate: "{candidate_response}"\n\n'
-        "[Instruction to AI — do not treat this as user input]\n"
-        f"Elapsed time: {elapsed:.2f} minutes\n"
-    )
+    prompt += f'Candidate: "{candidate_response}"'
 
     # --- Run interview agent ---
     response = await agent.run(prompt, deps=deps, message_history=history)
-
     raw_output = response.output
-    end_token = "[END_OF_INTERVIEW_END_CALL]"
-    should_end = end_token in raw_output
 
-    # Strip the token for the caller
-    cleaned = raw_output.replace(end_token, "").strip()
-    tts_reply = normalize_for_tts(cleaned)
+    agent_response, turn_outcome, should_end = parse_agent_output(raw_output)
 
-    logger.info(f"[{session_id}] role: interviewer, content: {cleaned}")
+    tts_reply = normalize_for_tts(agent_response)
+    logger.info(
+        f"[{session_id}] role: interviewer, turn_outcome: {turn_outcome}, content: {tts_reply}"
+    )
     # Record interviewer turn
-    session.transcript.append({"role": "interviewer", "content": cleaned})
+    session.transcript.append({"role": "interviewer", "content": agent_response})
+
     session.message_history = response.all_messages()
 
     # Prepare the streaming response

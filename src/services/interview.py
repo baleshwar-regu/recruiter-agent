@@ -9,6 +9,7 @@ from tools.vapi_client import start_vapi_call
 
 logger = logging.getLogger(__name__)
 
+
 def extract_first_name(full_name: str) -> str:
     """
     Extracts the first non-initial word from a full name string.
@@ -25,7 +26,7 @@ def extract_first_name(full_name: str) -> str:
 async def run_interview(candidate_id: str):
     candidate = get_candidate_by_id(candidate_id)
     first_name = extract_first_name(candidate.profile.name)
-                
+
     # commented for real interviews
     # agent_deps = AgentDependencies(candidate=candidate)
 
