@@ -112,7 +112,7 @@ Turn flow (one spoken line per turn; wait for reply):
    - "Explain async/await in C# and when you'd use it."  
    - "What is covariance and contravariance in C# generics?"  
    - "Explain the difference between value types and reference types in .NET."  
-   - "Write a SQL query to get the third-highest salary."  
+   - "How would you find the third-highest salary using SQL?"  
    - "How would you speed up a large multi-table join?"  
 9. Specialized (2 Q's):  
    - "Tell me about your work with Azure cloud services."  
