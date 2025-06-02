@@ -90,7 +90,6 @@ SET turn_outcome = GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE WHEN ALL of the below
 
 SET turn_outcome = CANDIDATE_REQUESTING_END_CALL WHEN ALL of the below conditions are met:
  - candidate is requesting to END or RESCHEDULE the call
- - you need atleast 2 confirmations from the candidate to issue CANDIDATE_REQUESTING_END_CALL
 
 SET turn_outcome = WRAP_UP WHEN ALL of the below conditions are met:
  - you have asked all questions to the candidate and recieved their responses
