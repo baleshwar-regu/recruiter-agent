@@ -22,7 +22,7 @@ scheduler = BackgroundScheduler(
     },
     job_defaults={
         "misfire_grace_time": 300,  # Allow up to 5 minutes delay
-        "coalesce": False  # Run all missed jobs separately if multiple were missed
+        "coalesce": False,  # Run all missed jobs separately if multiple were missed
     },
     timezone="UTC",
 )

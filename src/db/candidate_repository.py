@@ -1,10 +1,11 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 from supabase import create_client
 
-from config import SUPABASE_DB, SUPABASE_KEY, SUPABASE_URL
+from config import SUPABASE_DB, SUPABASE_KEY, SUPABASE_RESUME_BUCKET, SUPABASE_URL
 from models.candidate import (
     Candidate,
     CandidateEvaluation,
@@ -13,6 +14,7 @@ from models.candidate import (
     Scorecard,
 )
 
+logger = logging.getLogger(__name__)
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
@@ -37,10 +39,9 @@ def get_candidate_by_id(
     )
 
     if profile.resume_file_name:
-        response = supabase.storage.from_("recruiter-agent-resumes").create_signed_url(
-            path=profile.resume_file_name, expires_in=3600  # valid for 1 hour
-        )
-        profile.resume_url = response.get("signedUrl")
+        resume_signed_url = generate_signed_resume_url(profile.resume_file_name)
+        if resume_signed_url:
+            profile.resume_url = resume_signed_url
 
     resume_summary = (
         ResumeSummary(
@@ -177,6 +178,25 @@ def upsert_candidate_from_calendly(
         supabase.table(SUPABASE_DB).insert(data).execute()
 
     return candidate_id
+
+
+def generate_signed_resume_url(resume_file_name: str) -> str | None:
+
+    bucket = supabase.storage.from_(SUPABASE_RESUME_BUCKET)
+    folder = "/".join(resume_file_name.split("/")[:-1])
+    file_name = resume_file_name.split("/")[-1]
+
+    try:
+        files = bucket.list(path=folder or "")
+        if any(f["name"] == file_name for f in files):
+            response = bucket.create_signed_url(resume_file_name, expires_in=3600)
+            return response.get("signedUrl")
+        else:
+            logger.warning(f"Resume file not found: {resume_file_name}")
+            return None
+    except Exception as e:
+        logger.error(f"Error checking or signing resume file: {e}")
+        return None
 
 
 def clean_null_bytes(value):

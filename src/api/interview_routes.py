@@ -59,7 +59,7 @@ def parse_agent_output(raw_output: str):
             "GATEKEEPER_FAILURE_ALREADY_INTERVIEWED",
             "GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE",
             "CANDIDATE_REQUESTING_END_CALL",
-            "WRAP_UP"
+            "WRAP_UP",
         }
 
         # Override final agent response if it's a known terminal state
@@ -136,7 +136,7 @@ async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
     call_id = message.get("call", {}).get("id")
     reason = message.get("endedReason")
 
-    logger.info(f"[VAPI Webhook Received] Call ended: {call_id}, reason: {reason}")
+    logger.info(f"[VAPI Webhook] Call: {call_id}, status: {status}, reason: {reason}")
     if status == "ended" and reason != "assistant-ended-call-after-message-spoken":
         background_tasks.add_task(post_interview_tasks, call_id, False)
 
@@ -189,7 +189,9 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
     response = await agent.run(prompt, deps=deps, message_history=history)
     raw_output = response.output
 
-    agent_response, turn_outcome, turn_outcome_reasoning, should_end = parse_agent_output(raw_output)
+    agent_response, turn_outcome, turn_outcome_reasoning, should_end = (
+        parse_agent_output(raw_output)
+    )
 
     tts_reply = normalize_for_tts(agent_response)
     logger.info(
