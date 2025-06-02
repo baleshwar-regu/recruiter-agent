@@ -1,6 +1,7 @@
 pydantic-ai==0.1.8
 logfire==3.14.1
 supabase==2.15.1
+pdfminer.six==20250327
 python-docx==1.1.2
 pytest-asyncio==0.26.0
 APScheduler==3.11.0
