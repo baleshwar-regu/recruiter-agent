@@ -15,6 +15,7 @@ class SessionState:
     start_time: datetime
     control_url: str
     transcript: List[Dict[str, str]] = field(default_factory=list)
+    end_call: bool = False
 
 
 # Session store for multiple callers

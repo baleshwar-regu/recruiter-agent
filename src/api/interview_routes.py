@@ -134,10 +134,10 @@ async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
 
     status = message.get("status")
     call_id = message.get("call", {}).get("id")
+    reason = message.get("endedReason")
 
-    if status == "ended":
-        reason = message.get("endedReason")
-        logger.info(f"[VAPI] Call ended: {call_id}, reason: {reason}")
+    logger.info(f"[VAPI Webhook Received] Call ended: {call_id}, reason: {reason}")
+    if status == "ended" and reason != "assistant-ended-call-after-message-spoken":
         background_tasks.add_task(post_interview_tasks, call_id, False)
 
     return {"status": "ok"}
@@ -219,7 +219,9 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
         yield f"data: {json.dumps(final_response)}\n\n"
         yield "data: [DONE]\n\n"
         # If interview is over, schedule post-call tasks
-        if should_end:
+        # session_end_call helps to end the call only once
+        if should_end and not session.end_call:
+            session.end_call = True
             background_tasks.add_task(post_interview_tasks, session_id, True)
 
     return StreamingResponse(
@@ -275,8 +277,8 @@ async def post_interview_tasks(session_id: str, end_call: bool = True):
     # only end_call if not initiated by caller
     if end_call:
         try:
-            logger.info(f"[{session_id}] Waiting 10s before ending call...")
-            await asyncio.sleep(10)
+            logger.info(f"[{session_id}] Waiting 30s before ending call...")
+            await asyncio.sleep(30)
             await end_vapi_call(call_id=session_id, control_url=control_url)
             logger.info(f"Ended call: {session_id}")
         except Exception as e:
