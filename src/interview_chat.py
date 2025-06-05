@@ -1,73 +1,62 @@
 import asyncio
-import time
 from typing import List
 
 from pydantic_ai.messages import ModelMessage
-from supabase import create_client
 
 from agents.interview_agent import interview_agent
 from agents.resume_agent import resume_agent
-from config import SUPABASE_KEY, SUPABASE_URL
-from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
+from config import CANDIDATE_ID_TESTING
+from db.candidate_repository import get_candidate_by_id
 from models.agent_dependencies import AgentDependencies
 from tools.resume_parser import parse_resume_summary
 
 
 async def main():
 
-    supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    candidate = get_candidate_by_id(candidate_id="34d21a7f-7376-4032-bb12-c357d6687a62")
+    candidate = get_candidate_by_id(candidate_id=CANDIDATE_ID_TESTING)
 
     agent_deps = AgentDependencies(candidate=candidate)
 
-    # message = "analyze the resume for the candidate"
-    # response = await resume_agent.run(message, deps=agent_deps)
+    resume_agent_message = "analyze the resume for the candidate"
 
-    # resume_summary = parse_resume_summary(response.output)
-    # print(f"Resume summary: {resume_summary}")
+    resume_agent_response = await resume_agent.run(
+        resume_agent_message, deps=agent_deps
+    )
 
-    # candidate.resume_summary = resume_summary
-    # candidate.status = "RESUME_SUMMARY_GENERATED"
+    resume_summary = parse_resume_summary(resume_agent_response.output)
 
-    # response = update_candidate_by_id(candidate=candidate)
+    print(f"Resume summary: {resume_summary}")
 
-    start_time = time.time()
+    candidate.resume_summary = resume_summary
+    candidate.status = "RESUME_SUMMARY_GENERATED"
 
-    message = f"""
-        Candidate profile: {candidate.profile}
-        Resume summary: {candidate.resume_summary}
-        """
+    candidate_exp_summary = f"Candidate profile: {candidate.profile}\nResume summary: {candidate.resume_summary}"
+
     message_history: List[ModelMessage] = []
+    candidate_response = ""
 
     # Chat loop
     while True:
 
-        if message.lower() in ["exit", "quit"]:
+        if candidate_response.lower() in ["exit", "quit"]:
             print("Goodbye!")
             break
 
-        # Later, check elapsed time
-        elapsed_minutes = (time.time() - start_time) / 60
+        if not message_history:
+            candidate_response = candidate_exp_summary
 
-        augmented_message = f"""
-            [Instruction to AI — do not treat this as user input]
-            Elapsed time: {elapsed_minutes:.1f} minutes
-
-            Candidate: "{message}"
-            """
-
-        response = await interview_agent.run(
-            user_prompt=augmented_message,
+        interview_response = await interview_agent.run(
+            user_prompt=candidate_response,
             deps=agent_deps,
             message_history=message_history,
         )
 
-        message_history = response.all_messages()
+        message_history = interview_response.all_messages()
 
-        print(f"Interviewer: {response.output}")
+        print(f"Interviewer: {interview_response.output}")
 
         # Prompt next input
-        message = input("You: ")
+        candidate_response = input("You: ")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timezone
 
+from pydantic_ai.usage import Usage
+
 from agents.interview_agent import interview_agent
 from agents.resume_agent import resume_agent
 from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
@@ -36,9 +38,11 @@ async def run_interview(candidate_id: str):
         )
         agent_deps = AgentDependencies(candidate=candidate)
 
+        resume_agent_usage = Usage()
+
         resume_agent_message = "analyze the resume for the candidate"
         resume_agent_response = await resume_agent.run(
-            resume_agent_message, deps=agent_deps
+            resume_agent_message, deps=agent_deps, usage=resume_agent_usage
         )
         logger.info(f"Resume Summary output from LLM {resume_agent_response.output}")
 
@@ -67,6 +71,9 @@ async def run_interview(candidate_id: str):
     session_store[call_id] = SessionState(
         agent=interview_agent,
         agent_dependencies=deps,
+        resume_agent_usage=resume_agent_usage,
+        interview_agent_usage=Usage(),
+        evaluation_agent_usage=Usage(),
         message_history=[],
         start_time=datetime.now(timezone.utc),
         control_url=control_url,

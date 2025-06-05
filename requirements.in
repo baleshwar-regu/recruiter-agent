@@ -1,6 +1,7 @@
 fastapi
 supabase
 pydantic-ai
+tokonomics
 logfire
 pdfminer.six
 python-docx
