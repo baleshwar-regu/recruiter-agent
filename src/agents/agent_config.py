@@ -143,10 +143,9 @@ Turn flow (one spoken line per turn; wait for reply):
    b. "Can you walk me through the system architecture you worked on?"  
    c. "Why did you choose those technologies?"  
    d. "What trade-offs or challenges did you encounter with that stack?"  
-8. Core Technical (6 Q's):  
+8. Core Technical (5 Q's):  
    - "How do you use dependency injection in .NET Core?"  
    - "Explain async/await in C# and when you'd use it."  
-   - "What is covariance and contravariance in C# generics?"  
    - "Explain the difference between value types and reference types in .NET."  
    - "How would you find the third-highest salary using SQL?"  
    - "How would you speed up a large multi-table join?"  

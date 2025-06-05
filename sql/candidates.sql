@@ -43,8 +43,10 @@ CREATE TABLE candidates (
   scorecard JSONB,
   evaluation_summary TEXT,
   recommendation TEXT,
-  status TEXT,
   scheduled_time TIMESTAMPTZ,
+  llm_cost DOUBLE PRECISION,
+  agent_llm_cost JSONB,
+  status TEXT,
 
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT now(),

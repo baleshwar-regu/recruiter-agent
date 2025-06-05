@@ -7,12 +7,21 @@ from typing import List
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from pydantic_ai.usage import Usage
 
+from agents.agent_cost import compute_llm_cost
 from agents.evaluation_agent import evaluation_agent
 from agents.interview_agent import interview_agent
-from config import CALENDLY_MEETING_URL
+from config import (
+    CALENDLY_MEETING_URL,
+    CANDIDATE_ID_TESTING,
+    EVALUATION_LLM_MODEL,
+    INTERVIEW_LLM_MODEL,
+    RESUME_LLM_MODEL,
+)
 from db.candidate_repository import get_candidate_by_id, update_candidate_by_id
 from models.agent_dependencies import AgentDependencies
+from models.llm_cost import AgentLLMCost
 from models.session_state import SessionState, session_store
 from models.vapi_request import VAPIRequest
 from services.interview import run_interview
@@ -153,7 +162,7 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
     session_id = str(req.call.id)
     candidate_response = req.messages[-1].content
 
-    # TODO - only for testing
+    # only for testing
     if session_id in session_store:
         session = session_store[session_id]
     else:
@@ -164,14 +173,12 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
     deps = session.agent_dependencies
     agent = session.agent
     history = session.message_history
+    interview_agent_usage = session.interview_agent_usage
 
     logger.info(f"[{session_id}] role: candidate, content: {candidate_response}")
 
     # --- Append candidate turn to transcript ---
     session.transcript.append({"role": "candidate", "content": candidate_response})
-
-    # --- Prepare prompt for interview agent ---
-    elapsed = (now - session.start_time).total_seconds() / 60
 
     candidate_intro = (
         f"Candidate profile: {deps.candidate.profile}\n"
@@ -186,7 +193,12 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
     prompt += f'Candidate: "{candidate_response}"'
 
     # --- Run interview agent ---
-    response = await agent.run(prompt, deps=deps, message_history=history)
+    response = await agent.run(
+        user_prompt=prompt,
+        deps=deps,
+        usage=interview_agent_usage,
+        message_history=history,
+    )
     raw_output = response.output
 
     agent_response, turn_outcome, turn_outcome_reasoning, should_end = (
@@ -207,7 +219,7 @@ async def vapi_chat_completions(req: VAPIRequest, background_tasks: BackgroundTa
         "id": f"chatcmpl-{session_id}",
         "object": "chat.completion.chunk",
         "created": int(req.timestamp / 1000),
-        "model": "gpt-4",
+        "model": INTERVIEW_LLM_MODEL,
         "choices": [
             {
                 "delta": {"content": tts_reply},
@@ -287,6 +299,7 @@ async def post_interview_tasks(session_id: str, end_call: bool = True):
             logger.error(f"Error ending call {session_id}: {e}")
 
     deps = session.agent_dependencies
+    evaluation_agent_usage = session.evaluation_agent_usage
     candidate = deps.candidate
 
     # 3) Build full transcript
@@ -302,10 +315,35 @@ async def post_interview_tasks(session_id: str, end_call: bool = True):
     # 5) Run the evaluation agent
     # Since this is sync, spin up a fresh loop
     try:
-        result = await evaluation_agent.run(user_prompt=full_transcript, deps=deps)
-        logger.info(f"Evaluation results: {result.output}")
+        result = await evaluation_agent.run(
+            user_prompt=full_transcript, usage=evaluation_agent_usage, deps=deps
+        )
+        logger.info(f"[{session_id}] Evaluation results: {candidate.evaluation}")
     except Exception as e:
-        logger.error(f"[Error] running evaluation_agent: {e}")
+        logger.error(f"[{session_id}] [Error] running evaluation_agent: {e}")
+
+    resume_agent_cost = await compute_llm_cost(
+        session.resume_agent_usage, RESUME_LLM_MODEL
+    )
+    interview_agent_cost = await compute_llm_cost(
+        session.interview_agent_usage, INTERVIEW_LLM_MODEL
+    )
+    evaluation_agent_cost = await compute_llm_cost(
+        session.evaluation_agent_usage, EVALUATION_LLM_MODEL
+    )
+
+    agent_llm_cost = AgentLLMCost(
+        resume_agent=resume_agent_cost,
+        interview_agent=interview_agent_cost,
+        evaluation_agent=evaluation_agent_cost,
+    )
+
+    total_llm_cost = agent_llm_cost.total_llm_cost()
+
+    candidate.llm_cost = total_llm_cost
+    candidate.agent_llm_cost = agent_llm_cost
+    logger.info(f"[{session_id}] Total interview cost {total_llm_cost}")
+    update_candidate_by_id(candidate=candidate)
 
 
 def normalize_for_tts(text: str) -> str:
@@ -325,6 +363,7 @@ def normalize_for_tts(text: str) -> str:
     return text
 
 
+# called during an adhoc test
 def create_session_from_call_data(call_data: dict) -> SessionState:
     """
     Given the JSON response from GET https://api.vapi.ai/call/{call_id},
@@ -335,13 +374,15 @@ def create_session_from_call_data(call_data: dict) -> SessionState:
     call_id = call_data["id"]
     control_url = call_data["monitor"]["controlUrl"]
 
-    # Lookup your candidate however you map calls → candidates
-    candidate = get_candidate_by_id("34d21a7f-7376-4032-bb12-c357d6687a62")
+    candidate = get_candidate_by_id(CANDIDATE_ID_TESTING)
     deps = AgentDependencies(candidate=candidate)
 
     session = SessionState(
         agent=interview_agent,
         agent_dependencies=deps,
+        resume_agent_usage=Usage(),
+        interview_agent_usage=Usage(),
+        evaluation_agent_usage=Usage(),
         message_history=[],
         start_time=datetime.now(timezone.utc),
         control_url=control_url,

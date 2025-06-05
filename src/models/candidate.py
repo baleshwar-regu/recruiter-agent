@@ -2,6 +2,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from models.llm_cost import AgentLLMCost
+
 
 class CandidateProfile(BaseModel):
     candidate_id: str
@@ -40,6 +42,11 @@ class CandidateEvaluation(BaseModel):
     recommendation: Optional[Literal["Recommend", "Not Recommend"]] = None
 
 
+class Cost(BaseModel):
+    total_cost: float
+    agent_llm_cost: List[str] = Field(default_factory=list)
+
+
 class Candidate(BaseModel):
     profile: CandidateProfile
     parsed_resume: Optional[str] = None
@@ -47,3 +54,5 @@ class Candidate(BaseModel):
     interview_transcript: Optional[str] = None
     evaluation: Optional[CandidateEvaluation] = None
     status: Optional[str] = None
+    agent_llm_cost: Optional[AgentLLMCost] = None
+    llm_cost: Optional[float] = None

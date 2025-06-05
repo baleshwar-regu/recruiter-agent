@@ -96,6 +96,10 @@ def update_candidate_by_id(candidate: Candidate) -> str:
     if candidate.interview_transcript:
         data["interview_transcript"] = candidate.interview_transcript
 
+    if candidate.llm_cost:
+        data["llm_cost"] = candidate.llm_cost
+        data["agent_llm_cost"] = candidate.agent_llm_cost.model_dump()
+
     if candidate.status:
         data["status"] = candidate.status
 
