@@ -162,6 +162,7 @@ async def evaluate_interview(candidate_id: str):
     candidate = get_candidate_by_id(candidate_id)
     deps = AgentDependencies(candidate=candidate)
     full_transcript = candidate.interview_transcript
+    logger.info(f"Transcript: {full_transcript}")
     evaluation_agent_usage = Usage()
     try:
         result = await evaluation_agent.run(
