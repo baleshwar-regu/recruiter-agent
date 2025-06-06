@@ -72,6 +72,7 @@ def get_candidate_by_id(
         profile=profile,
         resume_summary=resume_summary,
         evaluation=evaluation,
+        interview_transcript=data.get("interview_transcript"),
         status=data.get("status"),
     )
 
