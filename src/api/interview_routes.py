@@ -74,12 +74,12 @@ def parse_agent_output(raw_output: str):
         # Override final agent response if it's a known terminal state
         if turn_outcome == "GATEKEEPER_FAILURE_ALREADY_INTERVIEWED":
             agent_response = (
-                "I appreciate you letting me know. Since you've already interviewed with Bain, "
+                "I appreciate you letting me know. Since you've already interviewed with the client, "
                 "I don't want to duplicate efforts. Thank you for your time today—I'll close us out here."
             )
         elif turn_outcome == "GATEKEEPER_FAILURE_INOFFICE_NOTPOSSIBLE":
             agent_response = (
-                "Thanks for being upfront. Bain has a strict three-day in-office policy, "
+                "Thanks for being upfront. Client has a strict three-day in-office policy, "
                 "so this role wouldn't be a fit. I'll wrap up our call now, and we'll keep you in mind "
                 "for other opportunities. Take care!"
             )
@@ -155,6 +155,39 @@ async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
 @router.post("/start/{candidate_id}")
 async def start_interview(candidate_id: str):
     return await run_interview(candidate_id)
+
+@router.post("/evaluate/{candidate_id}")
+async def evaluate_interview(candidate_id: str):
+    logger.info(f"[ADHOC_RUN] Starting evaluation for candidate: {candidate_id}")
+    candidate = get_candidate_by_id(candidate_id)
+    deps = AgentDependencies(candidate=candidate)
+    full_transcript = candidate.interview_transcript
+    evaluation_agent_usage = Usage()
+    try:
+        result = await evaluation_agent.run(
+            user_prompt=full_transcript, usage=evaluation_agent_usage, deps=deps
+        )
+        logger.info(f"[ADHOC_RUN] Evaluation results: {candidate.evaluation}")
+    except Exception as e:
+        logger.error(f"[ADHOC_RUN] [Error] running evaluation_agent: {e}")
+    
+    evaluation_agent_cost = await compute_llm_cost(
+        evaluation_agent_usage, EVALUATION_LLM_MODEL
+    )
+
+    agent_llm_cost = AgentLLMCost(
+        evaluation_agent=evaluation_agent_cost,
+    )
+
+    total_llm_cost = agent_llm_cost.total_llm_cost()
+
+    candidate.llm_cost = total_llm_cost
+    candidate.agent_llm_cost = agent_llm_cost
+    logger.info(f"[ADHOC_RUN] Total interview cost {total_llm_cost}")
+    update_candidate_by_id(candidate=candidate)
+
+    return {"status": "ok"}
+
 
 
 @router.post("/chat/completions")

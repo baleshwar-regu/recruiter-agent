@@ -26,7 +26,7 @@ def run_common_assertions(persona: str, transcript: list[tuple[str, str]]):
     flat_text = " ".join(r for _, r in transcript).lower()
 
     assert "bigo1" in flat_text, f"[{persona}] Agent did not mention BIGO1"
-    assert "bain" in flat_text, f"[{persona}] Agent did not mention Bain"
+    assert "Joy & Grace" in flat_text, f"[{persona}] Agent did not mention Joy & Grace"
     assert (
         "years of experience" in flat_text
     ), f"[{persona}] Agent skipped experience question"

@@ -7,7 +7,7 @@ from pydantic_ai.messages import ModelMessage
 from agents.evaluation_agent import evaluation_agent
 from agents.interview_agent import interview_agent
 from agents.resume_agent import resume_agent
-from config import CANDIDATE_ID_TESTING, INTERVIEW_LLM_MODEL
+from config import CANDIDATE_ID_TESTING, INTERVIEW_LLM_MODEL, CLIENT_NAME
 from db.candidate_repository import get_candidate_by_id
 from models.agent_dependencies import AgentDependencies
 from tools.resume_parser import parse_resume_summary
@@ -16,7 +16,7 @@ from tools.resume_parser import parse_resume_summary
 CANDIDATE_PROMPT_TEMPLATE = """
 You are simulating a real candidate in a live voice interview.
 
-Your role: A software engineer interviewing for a .NET / C# / SQL role at Bain & Company.
+Your role: A software engineer interviewing for a .NET / C# / SQL role at {client_name}.
 
 You must stay completely in character throughout the interview. Respond as if you're a real person — not a bot — and stick to your assigned **personality** and **skill level**:
 
@@ -68,7 +68,7 @@ async def simulate_interview(personality: str, skill: str):
 
     # Candidate Agent responds based on personality
     candidate_prompt = CANDIDATE_PROMPT_TEMPLATE.format(
-        personality=personality, skill=skill
+        personality=personality, skill=skill, client_name=CLIENT_NAME
     )
 
     candidate_agent = Agent(
