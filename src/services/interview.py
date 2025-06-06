@@ -30,15 +30,14 @@ def extract_first_name(full_name: str) -> str:
 async def run_interview(candidate_id: str):
     candidate = get_candidate_by_id(candidate_id)
     first_name = extract_first_name(candidate.profile.name)
-
+    resume_agent_usage = Usage()
     resume_url = candidate.profile.resume_url
+    
     if resume_url:
         logger.info(
             f"Resume available for candidate {candidate_id}. Kicking off Resume Agent."
         )
         agent_deps = AgentDependencies(candidate=candidate)
-
-        resume_agent_usage = Usage()
 
         resume_agent_message = "analyze the resume for the candidate"
         resume_agent_response = await resume_agent.run(
