@@ -10,9 +10,9 @@ class LLMCost(BaseModel):
 
 
 class AgentLLMCost(BaseModel):
-    resume_agent: Optional[LLMCost]
-    interview_agent: Optional[LLMCost]
-    evaluation_agent: Optional[LLMCost]
+    resume_agent: Optional[LLMCost] = None
+    interview_agent: Optional[LLMCost] = None
+    evaluation_agent: Optional[LLMCost] = None
 
     def total_llm_cost(self) -> float:
         total = 0.0

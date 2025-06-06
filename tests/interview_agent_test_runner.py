@@ -12,7 +12,7 @@ from models.agent_dependencies import AgentDependencies
 PERSONA_RESPONSES = {
     "strong": {
         "Greeting": "I'm doing great, thank you! Yes, this is a good time to speak.",
-        "StatusCheck": "No, I have not interviewed with Bain before.",
+        "StatusCheck": "No, I have not interviewed with Joy & Grace Inc before.",
         "ExperienceYears": "I have 12 years of experience in software engineering.",
         "CurrentProject": "I'm currently leading a CRM system rewrite using C# and Azure.",
         "Responsibilities": "I'm responsible for backend architecture, team mentorship, and code quality.",
@@ -79,9 +79,9 @@ async def run_interview_test(persona_name: str) -> List[Tuple[str, str]]:
     prompts = [
         (
             "Greeting",
-            "Begin with a greeting, confirm timing, introduce BIGO1 and Bain, and describe the role.",
+            "Begin with a greeting, confirm timing, introduce BIGO1 and Joy & Grace, and describe the role.",
         ),
-        ("StatusCheck", "Ask if the candidate has interviewed with Bain."),
+        ("StatusCheck", "Ask if the candidate has interviewed with Joy & Grace."),
         ("ExperienceYears", "Ask about total years of experience."),
         ("CurrentProject", "Ask about their current project."),
         ("Responsibilities", "Ask about their responsibilities."),
