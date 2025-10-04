@@ -103,9 +103,3 @@ Environment variables should be stored in a `.env` file. Rename `.env.example` t
 
 ---
 
-## 👤 Author
-
-Created by [AI in Real World](https://www.youtube.com/@aiinrealworld)  
-
----
-
